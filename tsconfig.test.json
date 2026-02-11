@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": ".test-dist",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "incremental": false,
+    "types": ["node"]
+  },
+  "include": [
+    "src/**/*.test.ts",
+    "src/lib/validation/epub.ts",
+    "src/lib/uploads/epub-upload.ts",
+    "src/lib/supabase/auth-routing.ts"
+  ],
+  "exclude": ["node_modules"]
+}

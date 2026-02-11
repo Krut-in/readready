@@ -1,0 +1,42 @@
+{
+  "name": "readready2",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --webpack",
+    "build": "next build --webpack",
+    "start": "next start",
+    "lint": "eslint src middleware.ts next.config.ts eslint.config.mjs postcss.config.mjs --ignore-pattern next-env.d.ts",
+    "typecheck": "tsc --noEmit",
+    "format": "eslint src middleware.ts next.config.ts eslint.config.mjs postcss.config.mjs --ignore-pattern next-env.d.ts --fix",
+    "format:check": "eslint src middleware.ts next.config.ts eslint.config.mjs postcss.config.mjs --ignore-pattern next-env.d.ts",
+    "test": "tsc -p tsconfig.test.json && node --test \".test-dist/**/*.test.js\"",
+    "test:watch": "tsc -p tsconfig.test.json && node --test --watch \".test-dist/**/*.test.js\""
+  },
+  "dependencies": {
+    "@supabase/ssr": "0.8.0",
+    "@supabase/supabase-js": "2.87.1",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "framer-motion": "12.23.12",
+    "iceberg-js": "0.8.1",
+    "lucide-react": "0.544.0",
+    "next": "16.0.10",
+    "react": "19.2.1",
+    "react-dom": "19.2.1",
+    "tailwind-merge": "3.4.0",
+    "zod": "4.1.13"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "3.3.1",
+    "@tailwindcss/postcss": "4.1.13",
+    "@types/node": "20.19.13",
+    "@types/react": "19.1.13",
+    "@types/react-dom": "19.1.9",
+    "eslint": "9.35.0",
+    "eslint-config-next": "16.0.10",
+    "tailwindcss": "4.1.13",
+    "typescript-eslint": "8.49.0",
+    "typescript": "5.9.2"
+  }
+}
