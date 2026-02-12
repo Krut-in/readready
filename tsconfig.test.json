@@ -6,13 +6,19 @@
     "module": "commonjs",
     "moduleResolution": "node",
     "incremental": false,
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
   "include": [
     "src/**/*.test.ts",
     "src/lib/validation/epub.ts",
     "src/lib/uploads/epub-upload.ts",
-    "src/lib/supabase/auth-routing.ts"
+    "src/lib/supabase/auth-routing.ts",
+    "src/lib/errors.ts",
+    "src/lib/library/**/*.ts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules"
+  ]
 }

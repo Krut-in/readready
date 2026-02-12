@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { BookOpen, Upload } from "lucide-react";
+import { BookOpen, Library, Upload } from "lucide-react";
 
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 
 const links = [
   { href: "/dashboard", label: "Dashboard", icon: BookOpen },
+  { href: "/library", label: "Library", icon: Library },
   { href: "/upload", label: "Upload", icon: Upload },
 ];
 
