@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -70,6 +71,11 @@ export function BookCard({ book, onEdit, onDelete }: BookCardProps) {
 
           {/* Actions */}
           <div className="flex items-center gap-1">
+            <Link href={`/read/${book.id}`}>
+              <Button size="sm" variant="default" className="h-7 px-3 text-xs">
+                Read
+              </Button>
+            </Link>
             <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => onEdit(book)}>
               Edit
             </Button>
