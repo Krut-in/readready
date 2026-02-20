@@ -1,90 +1,83 @@
-# ReadReady (P-1 Foundation)
+# ReadReady
 
-ReadReady is a web-first deep reading app focused on EPUB library workflows and a distraction-minimal reading environment.
+**A distraction-minimal reading sanctuary that transforms EPUB files into focused, trackable reading sessions.**
 
-This repository currently implements **Phase P-1: Foundation and Infrastructure** only.
+## The Problem
 
-## P-1 Includes
+The average person checks their phone 150+ times a day. Short-form feeds have quietly eroded our capacity for sustained attention — not because we stopped valuing books, but because the friction of starting feels greater than the ease of scrolling. The books pile up on nightstands and wishlists. The intention to read persists. The pages don't turn.
 
-- Next.js + React + TypeScript + Tailwind + shadcn-style scaffolding.
-- Framer Motion wired into the base shell.
-- Supabase Auth integration (Google OAuth primary flow + sign-out).
-- Protected routes (`/dashboard`, `/upload`) enforced by middleware.
-- Supabase Storage setup for EPUB uploads.
-- EPUB upload API with server-side validation:
-  - EPUB only
-  - 100 MB max
-  - user-friendly errors
-- Base schema and storage migrations under `/supabase/migrations`.
-- Theme-capable responsive shell with light/dark/warm/night presets.
+This is the "start gap" — the space between wanting to read and actually doing it. ReadReady was architected to close it.
+
+## What ReadReady Does
+
+ReadReady is a full-stack web application that unifies EPUB reading, personal library management, and behavioural motivation into one calm, focused interface. Upload a book, open it, and start reading — no clutter, no guilt-driven timers, no social pressure. The experience feels like stepping into a quiet personal library with a single purpose: helping you read deeply and consistently.
+
+The architecture prioritises server-side data fetching via React Server Components for instant page loads, client-side interactivity only where it matters, and row-level security policies on every database table so user data is isolated at the Postgres layer — not just the application layer.
+
+## Key Features
+
+### EPUB Reader, Engineered for Deep Focus
+
+The reader renders paginated EPUB content via epub.js with deliberately minimal chrome — controls auto-fade on idle, leaving nothing but text. Four reading themes (light, dark, warm, night) inject CSS directly into the rendition, embedding SVG fill classes for annotation highlight colours so they persist correctly across theme switches without re-injection.
+
+Typography is treated as a first-class concern: five curated typefaces (Literata, Bookerly, Charter, Spectral, system-ui), adjustable sizing (12–32px), and four line-height presets — all calibrated around the 70–75 characters-per-line measure that typographic research associates with optimal reading comfort. Navigation supports keyboard arrows, click-to-turn gutters, and a slide-out table of contents.
+
+### Multi-Colour Annotations with CFI Anchoring
+
+Text selection triggers a spring-animated action bar (Framer Motion) for choosing highlight colours — yellow, red, green, or blue. Each annotation is anchored via EPUB Canonical Fragment Identifiers, structurally validated before persistence, and supports Markdown notes rendered inline with react-markdown and remark-gfm. Highlights replay automatically on spine-item transitions, ensuring annotations follow you seamlessly through the book.
+
+### Intelligent Library Management
+
+Books are organised through a three-state machine — **To Read → Reading → Completed** — enforced by a Postgres enum. Duplicate detection uses database-level generated stored columns (`title_norm`, `author_norm`) with a unique composite constraint, making conflict resolution deterministic regardless of application-layer normalisation. A trigram-indexed (`pg_trgm`) GIN index on titles powers sub-second fuzzy search across the entire library.
+
+Metadata enrichment employs a dual-source cascade: Google Books API first, with automatic Open Library fallback — both gated by 5-second `AbortController` timeouts to keep the interface responsive.
+
+### Two-Phase Goodreads Import
+
+An RFC-4180 compliant CSV parser handles Goodreads exports — including quoted fields, embedded commas, escaped quotes, and BOM markers. The import is architected in two deliberate phases: **preview** (parse, detect conflicts via normalised title+author matching, surface decisions) then **confirm** (apply user choices — keep existing, replace, or skip). Zero writes occur until the user explicitly approves the merge.
+
+### Progress Tracking & Motivational Dashboard
+
+Reading sessions feed an append-only log — no UPDATE or DELETE RLS policies exist by design, preserving immutable history. Session data persists on component unmount via `fetch` with `keepalive: true`, ensuring no data is lost during page navigation.
+
+The server-rendered dashboard aggregates 90 days of sessions and powers three animated widgets: **Current Reads** with SVG progress arcs drawn in via Framer Motion, **Streak Tracking** requiring a qualifying minimum of five pages per day, and a **Reading Debt** card that frames missed days as "owed sessions" — capped at 15, repayable through extra reading, with encouraging language instead of guilt.
 
 ## Tech Stack
 
-- Next.js 15 (App Router)
-- TypeScript (strict mode)
-- Tailwind CSS 4
-- Framer Motion
-- Supabase (`@supabase/supabase-js`, `@supabase/ssr`)
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 16 (App Router, React Server Components) |
+| UI | React 19, Tailwind CSS 4, Radix UI, Framer Motion |
+| Reader Engine | epub.js (paginated rendition) |
+| Backend | Supabase — Auth, Postgres with RLS, Storage |
+| Validation | Zod schemas, custom EPUB & CFI validators |
+| Deployment | Vercel (Edge Network CDN) |
 
-## Environment Variables
+## Getting Started
 
-Copy `.env.example` to `.env.local` and set values:
+1. **Clone and install dependencies**
+   ```bash
+   git clone https://github.com/Krut-in/readready.git
+   cd readready && npm install
+   ```
 
-```bash
-cp .env.example .env.local
-```
+2. **Configure environment** — copy `.env.example` to `.env.local` and add your Supabase credentials:
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=your_project_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+   ```
 
-Required variables:
+3. **Apply database migrations** — run the SQL files in `supabase/migrations/` sequentially via the Supabase CLI or dashboard.
 
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `NEXT_PUBLIC_APP_URL` (for local dev: `http://localhost:3000`)
+4. **Launch the development server**
+   ```bash
+   npm run dev
+   ```
 
-## Supabase Setup Checklist (Google OAuth)
+## Future Scope
 
-1. Create a Supabase project.
-2. In Supabase Dashboard, enable Google provider under `Authentication -> Providers`.
-3. Set authorized redirect URL(s):
-   - `http://localhost:3000/auth/callback`
-   - your production callback URL when deployed
-4. Set project URL and anon key in `.env.local`.
-5. Apply migrations in order:
-   - `supabase/migrations/0001_base_schema.sql`
-   - `supabase/migrations/0002_storage_epubs.sql`
-
-## Scripts
-
-```bash
-npm run dev
-npm run build
-npm run lint
-npm run typecheck
-npm run test
-npm run format
-npm run format:check
-```
-
-## Core Routes
-
-- `/` landing page
-- `/sign-in` Google OAuth entry
-- `/auth/callback` OAuth callback exchange
-- `/auth/signout` sign-out endpoint
-- `/dashboard` protected shell landing
-- `/upload` protected EPUB upload screen
-- `/api/uploads/epub` upload API
-
-## Upload Rules
-
-- File format: EPUB only (`.epub`, `application/epub+zip`)
-- Upload limit: 100 MB
-- DRM-protected books: not supported
-
-## Deployment Target
-
-- Vercel (with Vercel Edge Network CDN)
-
-## Project Docs
-
-- PRD: `/Users/krutinrahtod/Desktop/Desktop/WEB/webCodes/latestCodee/readReady2/docs/PRD-v0.md`
-- Backlog: `/Users/krutinrahtod/Desktop/Desktop/WEB/webCodes/latestCodee/readReady2/docs/backlog-p-1-p-5.md`
+- **Anticipation Engine** — LLM-powered teaser cards that surface hook-worthy passages before you open a book, using extractive techniques with spoiler guardrails
+- **Ambient Audio** — Expandable soundscape controls for focus-enhancing audio during reading sessions
+- **Native Mobile Apps** — iOS and Android clients following responsive web maturity
+- **Social Reading Surfaces** — Shared annotations and reading circles designed to complement deep reading, not distract from it
+- **Advanced Behavioural Analytics** — Personalised reading-pattern insights and experiments powered by the immutable session history
