@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { Search, ExternalLink, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -107,7 +108,7 @@ export function LibrarySearch({ searchTerm, onSearchTermChange, onAddFromMetadat
                     className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition hover:bg-accent"
                   >
                     {r.coverUrl ? (
-                      <img src={r.coverUrl} alt="" className="h-10 w-7 rounded object-cover" />
+                      <Image src={r.coverUrl} alt="" width={28} height={40} className="rounded object-cover" />
                     ) : (
                       <div className="flex h-10 w-7 items-center justify-center rounded bg-secondary text-[8px] text-muted-foreground">
                         N/A

@@ -29,19 +29,19 @@ function isTheme(value: string): value is ReadReadyTheme {
 }
 
 export function ThemeProvider({ children }: PropsWithChildren) {
-  const [theme, setThemeState] = useState<ReadReadyTheme>("light");
+  // Initialize from localStorage on first client render; fall back to "light"
+  // for SSR (where window is undefined). Lazy initializer avoids calling
+  // setState inside a useEffect, which triggers react-hooks/set-state-in-effect.
+  const [theme, setThemeState] = useState<ReadReadyTheme>(() => {
+    if (typeof window === "undefined") return "light";
+    const saved = localStorage.getItem(THEME_STORAGE_KEY);
+    return saved && isTheme(saved) ? saved : "light";
+  });
 
+  // Sync the data-theme attribute to the DOM whenever theme changes.
   useEffect(() => {
-    const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
-
-    if (savedTheme && isTheme(savedTheme)) {
-      setThemeState(savedTheme);
-      applyTheme(savedTheme);
-      return;
-    }
-
-    applyTheme("light");
-  }, []);
+    applyTheme(theme);
+  }, [theme]);
 
   const setTheme = (nextTheme: ReadReadyTheme): void => {
     setThemeState(nextTheme);

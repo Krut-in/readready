@@ -162,7 +162,6 @@ export function EpubReader({
       });
     };
     // bookId and estimatedTotalWords are stable across the component's lifetime
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookId, estimatedTotalWords]);
 
   // ── 1. Load annotations ────────────────────────────────────────────────────

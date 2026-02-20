@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { ExternalLink } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -34,15 +35,19 @@ export function BookCard({ book, onEdit, onDelete }: BookCardProps) {
     >
       <Card className="flex gap-4 p-4">
         {/* Cover */}
-        <div className="flex h-28 w-20 shrink-0 items-center justify-center rounded-lg bg-secondary/60 text-xs text-muted-foreground overflow-hidden">
+        <div className="relative h-28 w-20 shrink-0 rounded-lg bg-secondary/60 overflow-hidden">
           {book.coverUrl ? (
-            <img
+            <Image
               src={book.coverUrl}
               alt={`Cover of ${book.title}`}
-              className="h-full w-full object-cover rounded-lg"
+              fill
+              sizes="80px"
+              className="object-cover rounded-lg"
             />
           ) : (
-            <span className="px-1 text-center leading-tight">No Cover</span>
+            <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground px-1 text-center leading-tight">
+              No Cover
+            </div>
           )}
         </div>
 

@@ -133,11 +133,9 @@ test("searchMetadata falls back to Open Library when Google fails", async () => 
 });
 
 test("searchMetadata falls back when Google returns empty", async () => {
-    let callCount = 0;
     const original = globalThis.fetch;
 
     globalThis.fetch = async (input: string | URL | Request) => {
-        callCount++;
         const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
 
         if (url.includes("googleapis")) {

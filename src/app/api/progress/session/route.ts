@@ -72,6 +72,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ ok: true, skipped: true, reason: "no_progress" });
     }
 
+    // ── Verify book ownership (prevent IDOR) ──────────────────────────────────
+    const { data: ownedBook, error: ownershipError } = await supabase
+      .from("books")
+      .select("id")
+      .eq("id", bookId)
+      .eq("user_id", user.id)
+      .single();
+
+    if (ownershipError || !ownedBook) {
+      throw new AppError("not_found", "Book not found.", 404);
+    }
+
     // ── Calculate pages from progress delta ──────────────────────────────────
     const words = estimateWordsFromProgress(delta, estimatedTotalWords);
     const pages = wordsToPages(words);

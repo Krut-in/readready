@@ -19,6 +19,17 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   reactStrictMode: true,
 
+  images: {
+    remotePatterns: [
+      // Google Books API cover thumbnails (served over both http and https)
+      { protocol: "https", hostname: "books.google.com" },
+      { protocol: "http",  hostname: "books.google.com" },
+      { protocol: "https", hostname: "books.googleusercontent.com" },
+      // Open Library cover images
+      { protocol: "https", hostname: "covers.openlibrary.org" },
+    ],
+  },
+
   async headers() {
     return [
       {

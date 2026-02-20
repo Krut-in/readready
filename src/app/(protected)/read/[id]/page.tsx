@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { EpubReader } from "@/components/reader/epub-reader";
+import { logger } from "@/lib/logger";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -18,15 +19,16 @@ export default async function ReadPage({ params }: PageProps) {
     redirect("/sign-in");
   }
 
-  // 1. Fetch book + joined upload path
+  // 1. Fetch book + joined upload path (user_id filter enforces ownership)
   const { data: book, error: bookError } = await supabase
     .from("books")
     .select("*, book_uploads(storage_path)")
     .eq("id", id)
+    .eq("user_id", user.id)
     .single();
 
   if (bookError || !book) {
-    console.error("Error fetching book:", bookError);
+    logger.warn("read_page_book_not_found", { userId: user.id, bookId: id });
     redirect("/library");
   }
 
@@ -54,7 +56,7 @@ export default async function ReadPage({ params }: PageProps) {
     .createSignedUrl(uploadPath, 60 * 60 * 24);
 
   if (signedUrlError || !signedUrlData) {
-    console.error("Error creating signed URL:", signedUrlError);
+    logger.error("read_page_signed_url_failed", { userId: user.id, bookId: id, message: signedUrlError?.message });
     return (
       <div className="flex h-screen items-center justify-center">
         <p className="text-muted-foreground text-sm">Failed to load book. Please try again.</p>
