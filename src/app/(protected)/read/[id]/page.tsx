@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { EpubReader } from "@/components/reader/epub-reader";
-import { AppError } from "@/lib/errors";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -19,7 +18,7 @@ export default async function ReadPage({ params }: PageProps) {
     redirect("/sign-in");
   }
 
-  // 1. Fetch Book
+  // 1. Fetch book + joined upload path
   const { data: book, error: bookError } = await supabase
     .from("books")
     .select("*, book_uploads(storage_path)")
@@ -27,48 +26,51 @@ export default async function ReadPage({ params }: PageProps) {
     .single();
 
   if (bookError || !book) {
-    // In a real app, handle error gracefully (e.g., toast or error page)
     console.error("Error fetching book:", bookError);
-    redirect("/dashboard");
+    redirect("/library");
   }
 
-  // 2. Get Upload Path
-  // @ts-ignore - Supabase types might not fully infer the joined table yet without generation
-  const uploadPath = book.book_uploads?.storage_path;
+  // 2. Resolve storage path
+  // Supabase types don't fully infer nested join shapes without codegen, so we
+  // narrow via an intermediate unknown cast rather than @ts-ignore.
+  const bookWithJoin = book as unknown as {
+    title: string;
+    last_read_location?: string;
+    book_uploads?: { storage_path: string } | null;
+  };
+  const uploadPath = bookWithJoin.book_uploads?.storage_path;
 
   if (!uploadPath) {
-    console.error("Book has no associated upload file.");
-    // Should probably show an error state
     return (
-        <div className="flex h-screen items-center justify-center">
-            <p className="text-muted-foreground">Book file not found.</p>
-        </div>
+      <div className="flex h-screen items-center justify-center">
+        <p className="text-muted-foreground text-sm">Book file not found.</p>
+      </div>
     );
   }
 
-  // 3. Create Signed URL
+  // 3. Create a 24-hour signed URL
   const { data: signedUrlData, error: signedUrlError } = await supabase.storage
     .from("epubs")
-    .createSignedUrl(uploadPath, 60 * 60 * 24); // 24 hours
+    .createSignedUrl(uploadPath, 60 * 60 * 24);
 
   if (signedUrlError || !signedUrlData) {
     console.error("Error creating signed URL:", signedUrlError);
     return (
-        <div className="flex h-screen items-center justify-center">
-            <p className="text-muted-foreground">Failed to load book.</p>
-        </div>
+      <div className="flex h-screen items-center justify-center">
+        <p className="text-muted-foreground text-sm">Failed to load book. Please try again.</p>
+      </div>
     );
   }
 
-  // 4. Initial Location
-  // Cast to any because last_read_location is in the pending migration
-  const initialLocation = (book as any).last_read_location || undefined;
+  // 4. Resume location
+  const initialLocation = bookWithJoin.last_read_location;
 
   return (
-    <EpubReader 
-      url={signedUrlData.signedUrl} 
-      initialLocation={initialLocation}
+    <EpubReader
+      url={signedUrlData.signedUrl}
       bookId={id}
+      bookTitle={bookWithJoin.title}
+      initialLocation={initialLocation}
     />
   );
 }
