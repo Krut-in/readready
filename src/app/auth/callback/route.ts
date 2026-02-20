@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function sanitizeNextPath(nextPath: string | null): string {
-  if (!nextPath || !nextPath.startsWith("/")) {
+  if (!nextPath || !nextPath.startsWith("/") || nextPath.startsWith("//")) {
     return "/dashboard";
   }
 

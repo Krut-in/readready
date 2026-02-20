@@ -38,6 +38,9 @@ async function getStats(userId: string): Promise<DashboardStats> {
       .eq("user_id", userId),
   ]);
 
+  if (sessionsRes.error) throw new Error("Failed to load reading sessions.");
+  if (booksRes.error)   throw new Error("Failed to load books.");
+
   const rawSessions = sessionsRes.data ?? [];
   const rawBooks    = booksRes.data ?? [];
 
@@ -161,7 +164,7 @@ export default async function DashboardPage() {
         <h1 className="text-2xl font-semibold tracking-tight">
           Hi, {greetingName}
           {streak.currentStreak > 0
-            ? ` — ${streak.currentStreak} day streak! 🔥`
+            ? ` — ${streak.currentStreak}-day streak!`
             : "."}
         </h1>
         <p className="text-sm text-muted-foreground">

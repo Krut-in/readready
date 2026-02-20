@@ -107,6 +107,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       });
 
     if (sessionError) {
+      if (sessionError.code === "23505") {
+        return NextResponse.json({ ok: true, skipped: true, reason: "duplicate_session" });
+      }
       logger.error("session_insert_failed", {
         userId: user.id,
         bookId,
@@ -120,13 +123,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // ── Fetch recent book sessions for per-book streak calculation ────────────
-    const { data: bookSessions } = await supabase
+    const { data: bookSessions, error: bookSessionsError } = await supabase
       .from("reading_sessions")
       .select("session_date, pages_read")
       .eq("book_id", bookId)
       .eq("user_id", user.id)
       .order("session_date", { ascending: false })
       .limit(60); // 60 days is enough to determine any streak
+
+    if (bookSessionsError) {
+      logger.warn("book_sessions_fetch_failed", { userId: user.id, bookId, code: bookSessionsError.message });
+    }
 
     const bookStreak = calcBookStreak(
       (bookSessions ?? []) as { session_date: string; pages_read: number }[],

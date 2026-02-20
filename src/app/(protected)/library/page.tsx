@@ -15,6 +15,7 @@ import type { Book, ReadingState, CreateBookInput, UpdateBookInput, MetadataResu
 export default function LibraryPage() {
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [stateFilter, setStateFilter] = useState<ReadingState | "all">("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -28,9 +29,14 @@ export default function LibraryPage() {
       if (stateFilter !== "all") params.set("state", stateFilter);
       const res = await fetch(`/api/library/books?${params.toString()}`);
       const data = await res.json();
-      if (data.ok) setBooks(data.books);
+      if (data.ok) {
+        setBooks(data.books);
+        setActionError(null);
+      } else {
+        setActionError(data.message ?? "Failed to load library.");
+      }
     } catch {
-      // Silently fail — books stay empty
+      setActionError("Network error. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -64,11 +70,14 @@ export default function LibraryPage() {
       });
       const data = await res.json();
       if (data.ok) {
+        setActionError(null);
         setShowForm(false);
         fetchBooks();
+      } else {
+        setActionError(data.message ?? "Failed to add book.");
       }
     } catch {
-      // Network error — could add toast
+      setActionError("Network error. Please try again.");
     }
   }
 
@@ -82,11 +91,14 @@ export default function LibraryPage() {
       });
       const data = await res.json();
       if (data.ok) {
+        setActionError(null);
         setEditingBook(null);
         fetchBooks();
+      } else {
+        setActionError(data.message ?? "Failed to update book.");
       }
     } catch {
-      // Network error
+      setActionError("Network error. Please try again.");
     }
   }
 
@@ -95,9 +107,14 @@ export default function LibraryPage() {
     try {
       const res = await fetch(`/api/library/books/${book.id}`, { method: "DELETE" });
       const data = await res.json();
-      if (data.ok) fetchBooks();
+      if (data.ok) {
+        setActionError(null);
+        fetchBooks();
+      } else {
+        setActionError(data.message ?? "Failed to delete book.");
+      }
     } catch {
-      // Network error
+      setActionError("Network error. Please try again.");
     }
   }
 
@@ -139,6 +156,14 @@ export default function LibraryPage() {
         />
         <StateFilter active={stateFilter} onChange={setStateFilter} />
       </div>
+
+      {/* Action error banner */}
+      {actionError && (
+        <p className="text-sm text-destructive flex items-center justify-between rounded-lg border border-destructive/40 px-3 py-2">
+          {actionError}
+          <button onClick={() => setActionError(null)} className="ml-4 text-xs">✕</button>
+        </p>
+      )}
 
       {/* Book grid */}
       {loading ? (

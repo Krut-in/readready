@@ -7,6 +7,18 @@ import { Search, ExternalLink, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { MetadataResult } from "@/lib/library/types";
 
+function ResultCover({ src, title }: { src: string; title: string }) {
+  const [err, setErr] = useState(false);
+  if (err) return (
+    <div className="flex h-10 w-7 items-center justify-center rounded bg-secondary text-[8px] text-muted-foreground">
+      N/A
+    </div>
+  );
+  return (
+    <Image src={src} alt={title} width={28} height={40} className="rounded object-cover" onError={() => setErr(true)} />
+  );
+}
+
 type LibrarySearchProps = {
   searchTerm: string;
   onSearchTermChange: (value: string) => void;
@@ -108,7 +120,7 @@ export function LibrarySearch({ searchTerm, onSearchTermChange, onAddFromMetadat
                     className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition hover:bg-accent"
                   >
                     {r.coverUrl ? (
-                      <Image src={r.coverUrl} alt="" width={28} height={40} className="rounded object-cover" />
+                      <ResultCover src={r.coverUrl} title={r.title} />
                     ) : (
                       <div className="flex h-10 w-7 items-center justify-center rounded bg-secondary text-[8px] text-muted-foreground">
                         N/A

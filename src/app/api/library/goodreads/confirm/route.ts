@@ -91,10 +91,11 @@ export async function POST(request: Request): Promise<NextResponse> {
                 goodreads_search_url: goodreadsUrl,
             });
 
-            if (!insertError) {
+            if (insertError) {
+                logger.warn("goodreads_import_insert_failed", { userId: user.id, title: row.title, code: insertError.code });
+            } else {
                 createdCount++;
             }
-            // Skip duplicates silently (race condition guard)
         }
 
         // Process replaces — update title/author/state/link, keep progress/upload
@@ -114,7 +115,9 @@ export async function POST(request: Request): Promise<NextResponse> {
                     .eq("id", preview.existingBookId)
                     .eq("user_id", user.id);
 
-                if (!updateError) {
+                if (updateError) {
+                    logger.warn("goodreads_import_update_failed", { userId: user.id, title: row.title, code: updateError.code });
+                } else {
                     replacedCount++;
                 }
             }

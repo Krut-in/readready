@@ -161,7 +161,7 @@ export function ImportPanel({ onImportComplete }: ImportPanelProps) {
         <div className="space-y-3">
           {/* Warnings */}
           {previewData.warnings.length > 0 && (
-            <div className="space-y-1 rounded-lg bg-accent/40 p-3">
+            <div className="max-h-32 overflow-y-auto space-y-1 rounded-lg bg-accent/40 p-3">
               <p className="flex items-center gap-1 text-xs font-medium">
                 <AlertTriangle className="size-3" /> Warnings
               </p>

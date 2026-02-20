@@ -322,7 +322,7 @@ export function EpubReader({
           .from("books")
           .update({ total_chapters: tocItems.length })
           .eq("id", bookId)
-          .then(() => {});
+          .catch(() => { /* fire-and-forget — non-critical */ });
       }
     });
 
@@ -383,23 +383,27 @@ export function EpubReader({
     setShowAnnotations(true);
 
     // Persist annotation + update notes_count
-    const { data: { user } } = await supabase.auth.getUser();
-    await Promise.all([
-      supabase.from("annotations").insert({
-        id,
-        book_id:      bookId,
-        user_id:      user?.id,
-        cfi_range:    newAnn.cfiRange,
-        text_content: newAnn.text,
-        color,
-      }),
-      supabase.from("books").update({ notes_count: next.length }).eq("id", bookId),
-    ]);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      await Promise.all([
+        supabase.from("annotations").insert({
+          id,
+          book_id:      bookId,
+          user_id:      user?.id,
+          cfi_range:    newAnn.cfiRange,
+          text_content: newAnn.text,
+          color,
+        }),
+        supabase.from("books").update({ notes_count: next.length }).eq("id", bookId),
+      ]);
+    } catch { /* optimistic UI already applied — non-critical */ }
   }, [pendingSelection, bookId, supabase]);
 
   const updateAnnotation = useCallback(async (id: string, note: string) => {
     setAnnotations((prev) => prev.map((a) => (a.id === id ? { ...a, note } : a)));
-    await supabase.from("annotations").update({ note }).eq("id", id);
+    try {
+      await supabase.from("annotations").update({ note }).eq("id", id);
+    } catch { /* optimistic UI already applied — non-critical */ }
   }, [supabase]);
 
   const deleteAnnotation = useCallback(async (id: string) => {
@@ -411,10 +415,12 @@ export function EpubReader({
     const next = annotationsRef.current.filter((a) => a.id !== id);
     setAnnotations(next);
     annotationsRef.current = next;
-    await Promise.all([
-      supabase.from("annotations").delete().eq("id", id),
-      supabase.from("books").update({ notes_count: next.length }).eq("id", bookId),
-    ]);
+    try {
+      await Promise.all([
+        supabase.from("annotations").delete().eq("id", id),
+        supabase.from("books").update({ notes_count: next.length }).eq("id", bookId),
+      ]);
+    } catch { /* optimistic UI already applied — non-critical */ }
   }, [bookId, supabase]);
 
   // ── 7. Render ──────────────────────────────────────────────────────────────

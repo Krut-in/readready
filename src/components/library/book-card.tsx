@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ExternalLink } from "lucide-react";
@@ -25,6 +26,8 @@ type BookCardProps = {
 };
 
 export function BookCard({ book, onEdit, onDelete }: BookCardProps) {
+  const [imgError, setImgError] = useState(false);
+
   return (
     <motion.div
       layout
@@ -36,13 +39,14 @@ export function BookCard({ book, onEdit, onDelete }: BookCardProps) {
       <Card className="flex gap-4 p-4">
         {/* Cover */}
         <div className="relative h-28 w-20 shrink-0 rounded-lg bg-secondary/60 overflow-hidden">
-          {book.coverUrl ? (
+          {book.coverUrl && !imgError ? (
             <Image
               src={book.coverUrl}
               alt={`Cover of ${book.title}`}
               fill
               sizes="80px"
               className="object-cover rounded-lg"
+              onError={() => setImgError(true)}
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground px-1 text-center leading-tight">
@@ -87,7 +91,7 @@ export function BookCard({ book, onEdit, onDelete }: BookCardProps) {
               )}
               <span>{book.notesCount} {book.notesCount === 1 ? "note" : "notes"}</span>
               {book.streakDays > 0 && (
-                <span>{book.streakDays}d streak 🔥</span>
+                <span>{book.streakDays}-day streak</span>
               )}
             </div>
           </div>
