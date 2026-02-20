@@ -2,6 +2,7 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -43,18 +44,19 @@ export function ThemeProvider({ children }: PropsWithChildren) {
     applyTheme(theme);
   }, [theme]);
 
-  const setTheme = (nextTheme: ReadReadyTheme): void => {
+  // FIXED: Wrap in useCallback to stabilize context value and prevent unnecessary re-renders
+  const setTheme = useCallback((nextTheme: ReadReadyTheme): void => {
     setThemeState(nextTheme);
     applyTheme(nextTheme);
     localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
-  };
+  }, []);
 
   const value = useMemo(
     () => ({
       theme,
       setTheme,
     }),
-    [theme],
+    [theme, setTheme],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

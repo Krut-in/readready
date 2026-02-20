@@ -29,6 +29,8 @@ type BookCardProps = {
 export function BookCard({ book, onEdit, onDelete }: BookCardProps) {
   const [imgError, setImgError] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  // FIXED: Upload errors were silently swallowed — now shown inline
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
@@ -37,6 +39,7 @@ export function BookCard({ book, onEdit, onDelete }: BookCardProps) {
     if (!file) return;
 
     setIsUploading(true);
+    setUploadError(null);
     try {
       const body = new FormData();
       body.set("file", file);
@@ -50,7 +53,8 @@ export function BookCard({ book, onEdit, onDelete }: BookCardProps) {
       if (response.ok) {
         router.refresh();
       } else {
-        console.error("Upload failed");
+        // FIXED: Show user-visible error instead of console.error
+        setUploadError("Upload failed. Please try again.");
       }
     } finally {
       setIsUploading(false);
@@ -131,6 +135,11 @@ export function BookCard({ book, onEdit, onDelete }: BookCardProps) {
               {book.streakDays > 0 && <span>{book.streakDays}-day streak</span>}
             </div>
           </div>
+
+          {/* Upload error */}
+          {uploadError && (
+            <p className="text-[10px] text-destructive">{uploadError}</p>
+          )}
 
           {/* Actions */}
           <div className="flex items-center gap-1">

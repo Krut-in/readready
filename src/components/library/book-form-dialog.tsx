@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,19 @@ export function BookFormDialog({ book, onSubmit, onClose }: BookFormDialogProps)
   const [author, setAuthor] = useState(book?.author ?? "");
   const [state, setState] = useState<ReadingState>(book?.state ?? "to_read");
   const [coverUrl, setCoverUrl] = useState(book?.coverUrl ?? "");
+
+  // FIXED: Close dialog on Escape key press
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    },
+    [onClose],
+  );
+
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleKeyDown]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -42,9 +55,15 @@ export function BookFormDialog({ book, onSubmit, onClose }: BookFormDialogProps)
     }
   }
 
+  // FIXED: Backdrop click closes dialog; added aria-modal for accessibility
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm">
-      <Card className="w-full max-w-md space-y-4 p-6">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
+      <Card className="w-full max-w-md space-y-4 p-6" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">{isEdit ? "Edit Book" : "Add Book"}</h2>
           <button onClick={onClose} className="rounded-full p-1 hover:bg-accent">
