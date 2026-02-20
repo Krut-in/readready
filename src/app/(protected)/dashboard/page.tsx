@@ -23,7 +23,7 @@ async function getStats(userId: string): Promise<DashboardStats> {
   ninetyDaysAgo.setUTCDate(ninetyDaysAgo.getUTCDate() - 90);
   const ninetyStr = toIsoDate(ninetyDaysAgo);
 
-  const [sessionsRes, booksRes] = await Promise.all([
+  const [sessionsRes, booksRes, allTimeRes] = await Promise.all([
     supabase
       .from("reading_sessions")
       .select("session_date, pages_read, words_read, duration_seconds, book_id")
@@ -36,13 +36,19 @@ async function getStats(userId: string): Promise<DashboardStats> {
         "id, title, author, cover_url, progress_percent, current_chapter_index, total_chapters, notes_count, last_read_at, streak_days, state",
       )
       .eq("user_id", userId),
+    // Separate query for true all-time totals (no date filter)
+    supabase
+      .from("reading_sessions")
+      .select("pages_read")
+      .eq("user_id", userId),
   ]);
 
   if (sessionsRes.error) throw new Error("Failed to load reading sessions.");
-  if (booksRes.error)   throw new Error("Failed to load books.");
+  if (booksRes.error) throw new Error("Failed to load books.");
 
   const rawSessions = sessionsRes.data ?? [];
-  const rawBooks    = booksRes.data ?? [];
+  const rawBooks = booksRes.data ?? [];
+  const allTimeSessions = allTimeRes.data ?? [];
 
   // ── Aggregate sessions by calendar date ─────────────────────────────────
   const byDate = new Map<
@@ -57,8 +63,8 @@ async function getStats(userId: string): Promise<DashboardStats> {
       duration: 0,
       bookIds: new Set<string>(),
     };
-    entry.pages    += s.pages_read    ?? 0;
-    entry.words    += s.words_read    ?? 0;
+    entry.pages += s.pages_read ?? 0;
+    entry.words += s.words_read ?? 0;
     entry.duration += s.duration_seconds ?? 0;
     entry.bookIds.add(s.book_id as string);
     byDate.set(s.session_date as string, entry);
@@ -68,20 +74,20 @@ async function getStats(userId: string): Promise<DashboardStats> {
   const dailyStats: DailyReadingStats[] = Array.from(byDate.entries())
     .map(([date, v]) => ({
       date,
-      totalPages:           v.pages,
-      totalWords:           v.words,
+      totalPages: v.pages,
+      totalWords: v.words,
       totalDurationSeconds: v.duration,
-      booksRead:            Array.from(v.bookIds),
-      qualifies:            v.pages >= 5,
+      booksRead: Array.from(v.bookIds),
+      qualifies: v.pages >= 5,
     }))
     .sort((a, b) => b.date.localeCompare(a.date));
 
   // ── Streak + debt ─────────────────────────────────────────────────────────
   const streak = calculateStreak(dailyStats);
-  const debt   = calculateReadingDebt(dailyStats, streak.currentStreak);
+  const debt = calculateReadingDebt(dailyStats, streak.currentStreak);
 
   // ── Today ─────────────────────────────────────────────────────────────────
-  const todayStr   = toIsoDate(new Date());
+  const todayStr = toIsoDate(new Date());
   const todayEntry = dailyStats.find((d) => d.date === todayStr);
   const todayPages = todayEntry?.totalPages ?? 0;
 
@@ -93,12 +99,12 @@ async function getStats(userId: string): Promise<DashboardStats> {
     const dateStr = toIsoDate(d);
     weeklyActivity.push(
       dailyStats.find((x) => x.date === dateStr) ?? {
-        date:                 dateStr,
-        totalPages:           0,
-        totalWords:           0,
+        date: dateStr,
+        totalPages: 0,
+        totalWords: 0,
         totalDurationSeconds: 0,
-        booksRead:            [],
-        qualifies:            false,
+        booksRead: [],
+        qualifies: false,
       },
     );
   }
@@ -107,27 +113,27 @@ async function getStats(userId: string): Promise<DashboardStats> {
   const activeBooks: ActiveBookStat[] = rawBooks
     .filter((b) => b.state === "reading")
     .map((b) => ({
-      id:                  b.id as string,
-      title:               b.title as string,
-      author:              (b.author as string) ?? null,
-      coverUrl:            (b.cover_url as string) ?? null,
-      progressPercent:     (b.progress_percent as number) ?? 0,
+      id: b.id as string,
+      title: b.title as string,
+      author: (b.author as string) ?? null,
+      coverUrl: (b.cover_url as string) ?? null,
+      progressPercent: (b.progress_percent as number) ?? 0,
       currentChapterIndex: (b.current_chapter_index as number) ?? 0,
-      totalChapters:       (b.total_chapters as number) ?? 0,
-      notesCount:          (b.notes_count as number) ?? 0,
-      lastReadAt:          (b.last_read_at as string) ?? null,
-      streakDays:          (b.streak_days as number) ?? 0,
+      totalChapters: (b.total_chapters as number) ?? 0,
+      notesCount: (b.notes_count as number) ?? 0,
+      lastReadAt: (b.last_read_at as string) ?? null,
+      streakDays: (b.streak_days as number) ?? 0,
     }))
-    .sort((a, b) =>
-      (b.lastReadAt ?? "").localeCompare(a.lastReadAt ?? ""),
-    );
+    .sort((a, b) => (b.lastReadAt ?? "").localeCompare(a.lastReadAt ?? ""));
 
   // ── All-time totals ───────────────────────────────────────────────────────
-  const totalPagesAllTime = rawSessions.reduce(
+  const totalPagesAllTime = allTimeSessions.reduce(
     (sum, s) => sum + ((s.pages_read as number) ?? 0),
     0,
   );
-  const totalBooksCompleted = rawBooks.filter((b) => b.state === "completed").length;
+  const totalBooksCompleted = rawBooks.filter(
+    (b) => b.state === "completed",
+  ).length;
 
   return {
     streak,
@@ -152,8 +158,14 @@ export default async function DashboardPage() {
   // user is guaranteed by the protected layout's middleware
   const stats = await getStats(user!.id);
 
-  const { streak, debt, todayPages, todayQualifies, weeklyActivity, activeBooks } =
-    stats;
+  const {
+    streak,
+    debt,
+    todayPages,
+    todayQualifies,
+    weeklyActivity,
+    activeBooks,
+  } = stats;
 
   const greetingName = user?.user_metadata?.full_name?.split(" ")[0] ?? "there";
 

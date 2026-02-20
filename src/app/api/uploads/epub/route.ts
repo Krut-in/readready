@@ -32,9 +32,10 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     const file = validated.file;
     const objectPath = buildStorageObjectPath(user.id);
+    const EPUB_MIME = "application/epub+zip";
 
     const { error: storageError } = await supabase.storage.from(EPUB_BUCKET).upload(objectPath, file, {
-      contentType: file.type || "application/epub+zip",
+      contentType: EPUB_MIME,
       upsert: false,
     });
 
@@ -53,7 +54,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       storage_path: storedPath,
       original_name: file.name,
       size_bytes: file.size,
-      mime_type: file.type || "application/epub+zip",
+      mime_type: EPUB_MIME,
     });
 
     if (insertError) {
@@ -71,7 +72,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       ok: true,
       path: storedPath,
       size: file.size,
-      contentType: file.type || "application/epub+zip",
+      contentType: EPUB_MIME,
     });
   } catch (error) {
     if (!(error instanceof AppError)) {

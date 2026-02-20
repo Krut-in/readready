@@ -6,7 +6,12 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import type { AnnotationColor } from "./epub-reader";
 
@@ -38,16 +43,16 @@ interface AnnotationManagerProps {
 
 const BORDER_COLOR: Record<AnnotationColor, string> = {
   yellow: "border-yellow-400",
-  red:    "border-red-400",
-  green:  "border-green-400",
-  blue:   "border-blue-400",
+  red: "border-red-400",
+  green: "border-green-400",
+  blue: "border-blue-400",
 };
 
 const SWATCH_COLOR: Record<AnnotationColor, string> = {
   yellow: "bg-yellow-300",
-  red:    "bg-red-400",
-  green:  "bg-green-400",
-  blue:   "bg-blue-400",
+  red: "bg-red-400",
+  green: "bg-green-400",
+  blue: "bg-blue-400",
 };
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -62,8 +67,8 @@ export function AnnotationManager({
   focusedId,
   onFocusedHandled,
 }: AnnotationManagerProps) {
-  const [editingId, setEditingId]   = React.useState<string | null>(null);
-  const [editValue, setEditValue]   = React.useState("");
+  const [editingId, setEditingId] = React.useState<string | null>(null);
+  const [editValue, setEditValue] = React.useState("");
   const focusedRef = React.useRef<HTMLDivElement>(null);
 
   // When focusedId changes, enter edit mode for that annotation
@@ -75,13 +80,15 @@ export function AnnotationManager({
       setEditValue(ann.note ?? "");
       // Scroll to the card once the Sheet animation has settled
       const t = setTimeout(() => {
-        focusedRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+        focusedRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
       }, 320);
       onFocusedHandled?.();
       return () => clearTimeout(t);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusedId]);
+  }, [focusedId, annotations, onFocusedHandled]);
 
   const handleSave = (id: string) => {
     onUpdate(id, editValue);
@@ -109,7 +116,8 @@ export function AnnotationManager({
             Annotations
             {annotations.length > 0 && (
               <span className="ml-auto text-xs font-normal text-muted-foreground">
-                {annotations.length} {annotations.length === 1 ? "note" : "notes"}
+                {annotations.length}{" "}
+                {annotations.length === 1 ? "note" : "notes"}
               </span>
             )}
           </SheetTitle>
@@ -202,13 +210,16 @@ function AnnotationCard({
       {/* Header: colour swatch + date + actions */}
       <div className="flex items-center gap-2 px-3 pt-2.5 pb-1">
         <span
-          className={cn("w-2.5 h-2.5 rounded-full shrink-0", SWATCH_COLOR[ann.color])}
+          className={cn(
+            "w-2.5 h-2.5 rounded-full shrink-0",
+            SWATCH_COLOR[ann.color],
+          )}
           aria-label={`${ann.color} highlight`}
         />
         <span className="text-[10px] text-muted-foreground flex-1">
           {new Date(ann.createdAt).toLocaleDateString(undefined, {
             month: "short",
-            day:   "numeric",
+            day: "numeric",
           })}
         </span>
         {!isEditing && (
@@ -218,7 +229,10 @@ function AnnotationCard({
               variant="ghost"
               className="h-6 w-6"
               aria-label="Edit note"
-              onClick={(e) => { e.stopPropagation(); onEditStart(); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onEditStart();
+              }}
             >
               <Edit2 className="h-3 w-3" />
             </Button>
@@ -227,7 +241,10 @@ function AnnotationCard({
               variant="ghost"
               className="h-6 w-6 hover:text-destructive"
               aria-label="Delete annotation"
-              onClick={(e) => { e.stopPropagation(); onDelete(); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
             >
               <Trash2 className="h-3 w-3" />
             </Button>
@@ -249,7 +266,10 @@ function AnnotationCard({
 
       {/* Note area */}
       {isEditing ? (
-        <div className="px-3 pb-3 space-y-2" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="px-3 pb-3 space-y-2"
+          onClick={(e) => e.stopPropagation()}
+        >
           <Textarea
             ref={textareaRef}
             value={editValue}
@@ -258,7 +278,12 @@ function AnnotationCard({
             className="text-sm min-h-[90px] resize-none font-mono text-xs leading-relaxed"
           />
           <div className="flex justify-end gap-2">
-            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={onCancel}>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 text-xs"
+              onClick={onCancel}
+            >
               Cancel
             </Button>
             <Button size="sm" className="h-7 text-xs" onClick={onSave}>

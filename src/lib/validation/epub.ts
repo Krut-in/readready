@@ -2,7 +2,6 @@ export const MAX_EPUB_BYTES = 100 * 1024 * 1024;
 
 const ALLOWED_EPUB_MIME_TYPES = new Set([
   "application/epub+zip",
-  "application/octet-stream",
 ]);
 
 export type EpubValidationCode = "invalid_type" | "file_too_large";

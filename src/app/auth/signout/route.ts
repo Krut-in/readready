@@ -12,5 +12,5 @@ export async function POST(request: Request): Promise<NextResponse> {
     // Fall through to sign-in page regardless.
   }
 
-  return NextResponse.redirect(redirectUrl);
+  return NextResponse.redirect(redirectUrl, 303);
 }

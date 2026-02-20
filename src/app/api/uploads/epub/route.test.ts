@@ -37,5 +37,5 @@ test("stored path is user-scoped in epubs bucket", () => {
   const storedPath = buildStoredPath(objectPath);
 
   assert.equal(objectPath, "user-123/file-abc.epub");
-  assert.equal(storedPath, "epubs/user-123/file-abc.epub");
+  assert.equal(storedPath, "user-123/file-abc.epub");
 });

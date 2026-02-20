@@ -45,5 +45,5 @@ export function buildStorageObjectPath(userId: string, id: string = crypto.rando
 }
 
 export function buildStoredPath(objectPath: string): string {
-  return `${EPUB_BUCKET}/${objectPath}`;
+  return objectPath;
 }

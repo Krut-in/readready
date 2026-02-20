@@ -1,7 +1,12 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import ePub, { type Book, type Rendition, type Location, type NavItem } from "epubjs";
+import ePub, {
+  type Book,
+  type Rendition,
+  type Location,
+  type NavItem,
+} from "epubjs";
 import { Loader2, Highlighter } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -48,16 +53,16 @@ const HL = `
 
 const THEMES: Record<ThemeName, string> = {
   light: `body{color:#1a1a1a;background:#ffffff;}a{color:#2563eb;}p,li,td{text-align:justify;}${HL}`,
-  dark:  `body{color:#b5b1ac;background:#1c1917;}a{color:#7dd3fc;}p,li,td{text-align:justify;}${HL}`,
-  warm:  `body{color:#4a3728;background:#f5edd6;}a{color:#92400e;}p,li,td{text-align:justify;}${HL}`,
+  dark: `body{color:#b5b1ac;background:#1c1917;}a{color:#7dd3fc;}p,li,td{text-align:justify;}${HL}`,
+  warm: `body{color:#4a3728;background:#f5edd6;}a{color:#92400e;}p,li,td{text-align:justify;}${HL}`,
   night: `body{color:#c97150;background:#0d0d0d;}a{color:#f97316;}p,li,td{text-align:justify;}${HL}`,
 };
 
 const COLOR_BG: Record<AnnotationColor, string> = {
   yellow: "bg-yellow-300",
-  red:    "bg-red-400",
-  green:  "bg-green-400",
-  blue:   "bg-blue-400",
+  red: "bg-red-400",
+  green: "bg-green-400",
+  blue: "bg-blue-400",
 };
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -70,58 +75,69 @@ export function EpubReader({
   onLocationChange,
   estimatedTotalWords,
 }: EpubReaderProps) {
-  const viewerRef    = useRef<HTMLDivElement>(null);
+  const viewerRef = useRef<HTMLDivElement>(null);
   const renditionRef = useRef<Rendition | null>(null);
-  const bookRef      = useRef<Book | null>(null);
+  const bookRef = useRef<Book | null>(null);
   // Keep a ref in sync so EPUB.js event handlers always see the latest list
   const annotationsRef = useRef<Annotation[]>([]);
 
   const supabase = createSupabaseBrowserClient();
 
   // ── Reading state ──────────────────────────────────────────────────────────
-  const [isReady,       setIsReady]       = useState(false);
-  const [toc,           setToc]           = useState<NavItem[]>([]);
-  const [currentCfi,    setCurrentCfi]    = useState(initialLocation ?? "");
+  const [isReady, setIsReady] = useState(false);
+  const [toc, setToc] = useState<NavItem[]>([]);
+  const [currentCfi, setCurrentCfi] = useState(initialLocation ?? "");
   const [currentPercent, setCurrentPercent] = useState(0);
   const [currentChapter, setCurrentChapter] = useState("");
 
   // ── Session tracking refs (survive across renders without triggering them) ──
   /** { percent, time } captured when the reader becomes ready */
-  const sessionStartRef      = useRef<{ percent: number; time: number } | null>(null);
+  const sessionStartRef = useRef<{ percent: number; time: number } | null>(
+    null,
+  );
   /** Always holds the most recent percent for use in cleanup without stale closure */
-  const currentPercentRef    = useRef(0);
+  const currentPercentRef = useRef(0);
   /** 0-indexed chapter index at the current location */
   const currentChapterIdxRef = useRef(0);
   /** TOC item count, updated once navigation loads */
-  const totalChaptersRef     = useRef(0);
+  const totalChaptersRef = useRef(0);
 
   // ── Typography settings ────────────────────────────────────────────────────
-  const [theme,      setTheme]      = useState<ThemeName>("light");
-  const [fontSize,   setFontSize]   = useState(18);   // px
+  const [theme, setTheme] = useState<ThemeName>("light");
+  const [fontSize, setFontSize] = useState(18); // px
   const [fontFamily, setFontFamily] = useState("Literata");
-  const [lineHeight, setLineHeight] = useState(1.6);
+  const [lineHeight, setLineHeight] = useState(1.5);
 
   // ── Annotations ───────────────────────────────────────────────────────────
-  const [annotations,        setAnnotations]        = useState<Annotation[]>([]);
-  const [showAnnotations,    setShowAnnotations]    = useState(false);
-  const [focusedAnnotationId, setFocusedAnnotationId] = useState<string | null>(null);
+  const [annotations, setAnnotations] = useState<Annotation[]>([]);
+  const [showAnnotations, setShowAnnotations] = useState(false);
+  const [focusedAnnotationId, setFocusedAnnotationId] = useState<string | null>(
+    null,
+  );
 
   // ── Pending selection (for highlight creation) ─────────────────────────────
-  const [pendingSelection, setPendingSelection] = useState<{ cfiRange: string; text: string } | null>(null);
-  const [pendingColor,     setPendingColor]     = useState<AnnotationColor>("yellow");
+  const [pendingSelection, setPendingSelection] = useState<{
+    cfiRange: string;
+    text: string;
+  } | null>(null);
+  const [pendingColor, setPendingColor] = useState<AnnotationColor>("yellow");
 
   // Keep ref in sync
-  useEffect(() => { annotationsRef.current = annotations; }, [annotations]);
+  useEffect(() => {
+    annotationsRef.current = annotations;
+  }, [annotations]);
 
   // ── Keep session tracking refs up-to-date ─────────────────────────────────
-  useEffect(() => { currentPercentRef.current = currentPercent; }, [currentPercent]);
+  useEffect(() => {
+    currentPercentRef.current = currentPercent;
+  }, [currentPercent]);
 
   // ── Start session clock once reader is ready ───────────────────────────────
   useEffect(() => {
     if (!isReady) return;
     sessionStartRef.current = {
       percent: currentPercentRef.current,
-      time:    Date.now(),
+      time: Date.now(),
     };
   }, [isReady]);
 
@@ -132,7 +148,7 @@ export function EpubReader({
       if (!session) return;
 
       const progressStart = session.percent;
-      const progressEnd   = currentPercentRef.current;
+      const progressEnd = currentPercentRef.current;
 
       // Only record sessions with meaningful forward progress
       if (progressEnd <= progressStart) return;
@@ -143,7 +159,7 @@ export function EpubReader({
         bookId,
         progressStart,
         progressEnd,
-        chapterIndex:  currentChapterIdxRef.current,
+        chapterIndex: currentChapterIdxRef.current,
         totalChapters: totalChaptersRef.current,
         durationSeconds,
       };
@@ -153,9 +169,9 @@ export function EpubReader({
 
       // keepalive: true allows this POST to survive a page navigation
       fetch("/api/progress/session", {
-        method:    "POST",
-        headers:   { "Content-Type": "application/json" },
-        body:      JSON.stringify(body),
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
         keepalive: true,
       }).catch(() => {
         // Fire-and-forget — any failure is non-critical
@@ -175,11 +191,11 @@ export function EpubReader({
 
       if (!error && data) {
         const mapped: Annotation[] = (data as AnnotationRow[]).map((a) => ({
-          id:        a.id,
-          cfiRange:  a.cfi_range,
-          text:      a.text_content,
-          note:      a.note ?? undefined,
-          color:     a.color as AnnotationColor,
+          id: a.id,
+          cfiRange: a.cfi_range,
+          text: a.text_content,
+          note: a.note ?? undefined,
+          color: a.color as AnnotationColor,
           createdAt: a.created_at,
         }));
         setAnnotations(mapped);
@@ -197,8 +213,8 @@ export function EpubReader({
         .from("books")
         .update({
           last_read_location: currentCfi,
-          progress_percent:   Math.min(100, Math.max(0, currentPercent)),
-          last_read_at:       new Date().toISOString(),
+          progress_percent: Math.min(100, Math.max(0, currentPercent)),
+          last_read_at: new Date().toISOString(),
         })
         .eq("id", bookId);
     }, 1000);
@@ -225,7 +241,13 @@ export function EpubReader({
     if (!r) return;
     annotationsRef.current.forEach((ann) => {
       try {
-        r.annotations.add("highlight", ann.cfiRange, { id: ann.id }, undefined, `hl-${ann.color}`);
+        r.annotations.add(
+          "highlight",
+          ann.cfiRange,
+          { id: ann.id },
+          undefined,
+          `hl-${ann.color}`,
+        );
       } catch {
         // Annotation may be out of current view range — silently skip
       }
@@ -246,9 +268,9 @@ export function EpubReader({
     bookRef.current = book;
 
     const rendition = book.renderTo(viewerRef.current, {
-      width:   "100%",
-      height:  "100%",
-      flow:    "paginated",
+      width: "100%",
+      height: "100%",
+      flow: "paginated",
       manager: "default",
       allowScriptedContent: false,
     });
@@ -272,8 +294,8 @@ export function EpubReader({
 
     // Location change → track progress + chapter
     rendition.on("relocated", (location: Location) => {
-      const cfi  = location.start.cfi;
-      const pct  = Math.round(location.start.percentage * 100);
+      const cfi = location.start.cfi;
+      const pct = Math.round(location.start.percentage * 100);
       setCurrentCfi(cfi);
       setCurrentPercent(pct);
       onLocationChange?.(cfi);
@@ -284,18 +306,21 @@ export function EpubReader({
     });
 
     // Text selection → capture for annotation creation
-    rendition.on("selected", (cfiRange: string, contents: { window: Window }) => {
-      try {
-        const range = rendition.getRange(cfiRange);
-        const text  = range?.toString().trim() ?? "";
-        if (text.length > 0) {
-          setPendingSelection({ cfiRange, text });
+    rendition.on(
+      "selected",
+      (cfiRange: string, contents: { window: Window }) => {
+        try {
+          const range = rendition.getRange(cfiRange);
+          const text = range?.toString().trim() ?? "";
+          if (text.length > 0) {
+            setPendingSelection({ cfiRange, text });
+          }
+          contents.window.getSelection()?.removeAllRanges();
+        } catch {
+          // getRange can fail when the selected page is no longer rendered
         }
-        contents.window.getSelection()?.removeAllRanges();
-      } catch {
-        // getRange can fail when the selected page is no longer rendered
-      }
-    });
+      },
+    );
 
     // Click existing highlight → focus annotation in rail
     rendition.on("markClicked", (cfiRange: string) => {
@@ -318,18 +343,25 @@ export function EpubReader({
       totalChaptersRef.current = tocItems.length;
       // Persist total_chapters on the book (fire-and-forget)
       if (tocItems.length > 0) {
-        supabase
+        void supabase
           .from("books")
           .update({ total_chapters: tocItems.length })
           .eq("id", bookId)
-          .catch(() => { /* fire-and-forget — non-critical */ });
+          .then(
+            () => {
+              /* fire-and-forget — non-critical */
+            },
+            () => {
+              /* ignore errors silently */
+            },
+          );
       }
     });
 
     // Keyboard navigation
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "ArrowRight") rendition.next();
-      if (e.key === "ArrowLeft")  rendition.prev();
+      if (e.key === "ArrowLeft") rendition.prev();
     };
     window.addEventListener("keydown", onKey);
 
@@ -343,7 +375,9 @@ export function EpubReader({
   // Derive chapter label + index whenever toc or cfi changes
   useEffect(() => {
     if (!toc.length || !currentCfi) return;
-    const href = currentHrefRef.current || (renditionRef.current?.location?.start?.href?.split("#")[0] ?? "");
+    const href =
+      currentHrefRef.current ||
+      (renditionRef.current?.location?.start?.href?.split("#")[0] ?? "");
     if (!href) return;
     const chapterIdx = toc.findIndex((item) => {
       const itemBase = ((item.href ?? "") as string).split("#")[0] ?? "";
@@ -356,77 +390,112 @@ export function EpubReader({
   }, [toc, currentCfi]);
 
   // ── 6. Annotation CRUD ─────────────────────────────────────────────────────
-  const addAnnotation = useCallback(async (color: AnnotationColor) => {
-    if (!pendingSelection) return;
+  const addAnnotation = useCallback(
+    async (color: AnnotationColor) => {
+      if (!pendingSelection) return;
 
-    const id = crypto.randomUUID();
-    const newAnn: Annotation = {
-      id,
-      cfiRange:  pendingSelection.cfiRange,
-      text:      pendingSelection.text,
-      color,
-      createdAt: new Date().toISOString(),
-    };
+      const id = crypto.randomUUID();
+      const newAnn: Annotation = {
+        id,
+        cfiRange: pendingSelection.cfiRange,
+        text: pendingSelection.text,
+        color,
+        createdAt: new Date().toISOString(),
+      };
 
-    // Apply to rendition immediately
-    try {
-      renditionRef.current?.annotations.add("highlight", newAnn.cfiRange, { id }, undefined, `hl-${color}`);
-    } catch { /* out of view */ }
+      // Apply to rendition immediately
+      try {
+        renditionRef.current?.annotations.add(
+          "highlight",
+          newAnn.cfiRange,
+          { id },
+          undefined,
+          `hl-${color}`,
+        );
+      } catch {
+        /* out of view */
+      }
 
-    const next = [...annotationsRef.current, newAnn];
-    setAnnotations(next);
-    annotationsRef.current = next;
-    setPendingSelection(null);
+      const next = [...annotationsRef.current, newAnn];
+      setAnnotations(next);
+      annotationsRef.current = next;
+      setPendingSelection(null);
 
-    // Open note rail with new annotation in edit mode
-    setFocusedAnnotationId(id);
-    setShowAnnotations(true);
+      // Open note rail with new annotation in edit mode
+      setFocusedAnnotationId(id);
+      setShowAnnotations(true);
 
-    // Persist annotation + update notes_count
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      await Promise.all([
-        supabase.from("annotations").insert({
-          id,
-          book_id:      bookId,
-          user_id:      user?.id,
-          cfi_range:    newAnn.cfiRange,
-          text_content: newAnn.text,
-          color,
-        }),
-        supabase.from("books").update({ notes_count: next.length }).eq("id", bookId),
-      ]);
-    } catch { /* optimistic UI already applied — non-critical */ }
-  }, [pendingSelection, bookId, supabase]);
+      // Persist annotation + update notes_count
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        await Promise.all([
+          supabase.from("annotations").insert({
+            id,
+            book_id: bookId,
+            user_id: user?.id,
+            cfi_range: newAnn.cfiRange,
+            text_content: newAnn.text,
+            color,
+          }),
+          supabase
+            .from("books")
+            .update({ notes_count: next.length })
+            .eq("id", bookId),
+        ]);
+      } catch {
+        /* optimistic UI already applied — non-critical */
+      }
+    },
+    [pendingSelection, bookId, supabase],
+  );
 
-  const updateAnnotation = useCallback(async (id: string, note: string) => {
-    setAnnotations((prev) => prev.map((a) => (a.id === id ? { ...a, note } : a)));
-    try {
-      await supabase.from("annotations").update({ note }).eq("id", id);
-    } catch { /* optimistic UI already applied — non-critical */ }
-  }, [supabase]);
+  const updateAnnotation = useCallback(
+    async (id: string, note: string) => {
+      setAnnotations((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, note } : a)),
+      );
+      try {
+        await supabase.from("annotations").update({ note }).eq("id", id);
+      } catch {
+        /* optimistic UI already applied — non-critical */
+      }
+    },
+    [supabase],
+  );
 
-  const deleteAnnotation = useCallback(async (id: string) => {
-    const ann = annotationsRef.current.find((a) => a.id === id);
-    if (ann) {
-      try { renditionRef.current?.annotations.remove(ann.cfiRange, "highlight"); }
-      catch { /* out of view */ }
-    }
-    const next = annotationsRef.current.filter((a) => a.id !== id);
-    setAnnotations(next);
-    annotationsRef.current = next;
-    try {
-      await Promise.all([
-        supabase.from("annotations").delete().eq("id", id),
-        supabase.from("books").update({ notes_count: next.length }).eq("id", bookId),
-      ]);
-    } catch { /* optimistic UI already applied — non-critical */ }
-  }, [bookId, supabase]);
+  const deleteAnnotation = useCallback(
+    async (id: string) => {
+      const ann = annotationsRef.current.find((a) => a.id === id);
+      if (ann) {
+        try {
+          renditionRef.current?.annotations.remove(ann.cfiRange, "highlight");
+        } catch {
+          /* out of view */
+        }
+      }
+      const next = annotationsRef.current.filter((a) => a.id !== id);
+      setAnnotations(next);
+      annotationsRef.current = next;
+      try {
+        await Promise.all([
+          supabase.from("annotations").delete().eq("id", id),
+          supabase
+            .from("books")
+            .update({ notes_count: next.length })
+            .eq("id", bookId),
+        ]);
+      } catch {
+        /* optimistic UI already applied — non-critical */
+      }
+    },
+    [bookId, supabase],
+  );
 
   // ── 7. Render ──────────────────────────────────────────────────────────────
   return (
     <div className="relative w-full h-screen flex flex-col overflow-hidden bg-background">
-
       <ReaderControls
         fontSize={fontSize}
         setFontSize={setFontSize}
@@ -499,33 +568,51 @@ export function EpubReader({
             {/* Preview of selected text */}
             <p className="flex-1 text-sm text-muted-foreground truncate">
               <span className="font-medium text-foreground italic">
-                &ldquo;{pendingSelection.text.length > 55
+                &ldquo;
+                {pendingSelection.text.length > 55
                   ? pendingSelection.text.slice(0, 55) + "…"
-                  : pendingSelection.text}&rdquo;
+                  : pendingSelection.text}
+                &rdquo;
               </span>
             </p>
 
             {/* Color swatches */}
-            <div className="flex items-center gap-1.5 shrink-0" role="group" aria-label="Highlight color">
-              {(["yellow", "red", "green", "blue"] as AnnotationColor[]).map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  aria-label={`${c} highlight`}
-                  className={cn(
-                    "w-5 h-5 rounded-full border-2 transition-transform duration-150",
-                    pendingColor === c ? "scale-125 border-foreground" : "border-transparent",
-                    COLOR_BG[c],
-                  )}
-                  onClick={() => setPendingColor(c)}
-                />
-              ))}
+            <div
+              className="flex items-center gap-1.5 shrink-0"
+              role="group"
+              aria-label="Highlight color"
+            >
+              {(["yellow", "red", "green", "blue"] as AnnotationColor[]).map(
+                (c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    aria-label={`${c} highlight`}
+                    className={cn(
+                      "w-5 h-5 rounded-full border-2 transition-transform duration-150",
+                      pendingColor === c
+                        ? "scale-125 border-foreground"
+                        : "border-transparent",
+                      COLOR_BG[c],
+                    )}
+                    onClick={() => setPendingColor(c)}
+                  />
+                ),
+              )}
             </div>
 
-            <Button size="sm" variant="ghost" onClick={() => setPendingSelection(null)}>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setPendingSelection(null)}
+            >
               Cancel
             </Button>
-            <Button size="sm" onClick={() => addAnnotation(pendingColor)} className="gap-1.5">
+            <Button
+              size="sm"
+              onClick={() => addAnnotation(pendingColor)}
+              className="gap-1.5"
+            >
               <Highlighter className="h-3.5 w-3.5" />
               Highlight
             </Button>
