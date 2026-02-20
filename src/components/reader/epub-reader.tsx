@@ -32,6 +32,8 @@ interface EpubReaderProps {
   bookTitle?: string | undefined;
   initialLocation?: string | undefined;
   onLocationChange?: ((cfi: string) => void) | undefined;
+  /** Estimated total word count for the book (default: 80 000) */
+  estimatedTotalWords?: number | undefined;
 }
 
 // ── Theme CSS ─────────────────────────────────────────────────────────────────
@@ -66,6 +68,7 @@ export function EpubReader({
   bookTitle,
   initialLocation,
   onLocationChange,
+  estimatedTotalWords,
 }: EpubReaderProps) {
   const viewerRef    = useRef<HTMLDivElement>(null);
   const renditionRef = useRef<Rendition | null>(null);
@@ -81,6 +84,16 @@ export function EpubReader({
   const [currentCfi,    setCurrentCfi]    = useState(initialLocation ?? "");
   const [currentPercent, setCurrentPercent] = useState(0);
   const [currentChapter, setCurrentChapter] = useState("");
+
+  // ── Session tracking refs (survive across renders without triggering them) ──
+  /** { percent, time } captured when the reader becomes ready */
+  const sessionStartRef      = useRef<{ percent: number; time: number } | null>(null);
+  /** Always holds the most recent percent for use in cleanup without stale closure */
+  const currentPercentRef    = useRef(0);
+  /** 0-indexed chapter index at the current location */
+  const currentChapterIdxRef = useRef(0);
+  /** TOC item count, updated once navigation loads */
+  const totalChaptersRef     = useRef(0);
 
   // ── Typography settings ────────────────────────────────────────────────────
   const [theme,      setTheme]      = useState<ThemeName>("light");
@@ -99,6 +112,58 @@ export function EpubReader({
 
   // Keep ref in sync
   useEffect(() => { annotationsRef.current = annotations; }, [annotations]);
+
+  // ── Keep session tracking refs up-to-date ─────────────────────────────────
+  useEffect(() => { currentPercentRef.current = currentPercent; }, [currentPercent]);
+
+  // ── Start session clock once reader is ready ───────────────────────────────
+  useEffect(() => {
+    if (!isReady) return;
+    sessionStartRef.current = {
+      percent: currentPercentRef.current,
+      time:    Date.now(),
+    };
+  }, [isReady]);
+
+  // ── Submit session on unmount (keepalive so it survives navigation) ────────
+  useEffect(() => {
+    return () => {
+      const session = sessionStartRef.current;
+      if (!session) return;
+
+      const progressStart = session.percent;
+      const progressEnd   = currentPercentRef.current;
+
+      // Only record sessions with meaningful forward progress
+      if (progressEnd <= progressStart) return;
+
+      const durationSeconds = Math.floor((Date.now() - session.time) / 1000);
+
+      const body: Record<string, unknown> = {
+        bookId,
+        progressStart,
+        progressEnd,
+        chapterIndex:  currentChapterIdxRef.current,
+        totalChapters: totalChaptersRef.current,
+        durationSeconds,
+      };
+      if (estimatedTotalWords) {
+        body.estimatedTotalWords = estimatedTotalWords;
+      }
+
+      // keepalive: true allows this POST to survive a page navigation
+      fetch("/api/progress/session", {
+        method:    "POST",
+        headers:   { "Content-Type": "application/json" },
+        body:      JSON.stringify(body),
+        keepalive: true,
+      }).catch(() => {
+        // Fire-and-forget — any failure is non-critical
+      });
+    };
+    // bookId and estimatedTotalWords are stable across the component's lifetime
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookId, estimatedTotalWords]);
 
   // ── 1. Load annotations ────────────────────────────────────────────────────
   useEffect(() => {
@@ -247,9 +312,19 @@ export function EpubReader({
       replayAnnotations();
     });
 
-    // TOC
+    // TOC — also records total chapters for session tracking
     book.loaded.navigation.then((nav) => {
-      setToc(nav.toc ?? []);
+      const tocItems = nav.toc ?? [];
+      setToc(tocItems);
+      totalChaptersRef.current = tocItems.length;
+      // Persist total_chapters on the book (fire-and-forget)
+      if (tocItems.length > 0) {
+        supabase
+          .from("books")
+          .update({ total_chapters: tocItems.length })
+          .eq("id", bookId)
+          .then(() => {});
+      }
     });
 
     // Keyboard navigation
@@ -266,16 +341,19 @@ export function EpubReader({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [url]);
 
-  // Derive chapter label whenever toc or cfi changes
+  // Derive chapter label + index whenever toc or cfi changes
   useEffect(() => {
     if (!toc.length || !currentCfi) return;
     const href = currentHrefRef.current || (renditionRef.current?.location?.start?.href?.split("#")[0] ?? "");
     if (!href) return;
-    const chapter = toc.find((item) => {
+    const chapterIdx = toc.findIndex((item) => {
       const itemBase = ((item.href ?? "") as string).split("#")[0] ?? "";
       return itemBase && (href.endsWith(itemBase) || itemBase.endsWith(href));
     });
+    const chapter = chapterIdx >= 0 ? toc[chapterIdx] : undefined;
     setCurrentChapter(chapter?.label ?? "");
+    // Keep ref up-to-date for session tracking
+    currentChapterIdxRef.current = Math.max(0, chapterIdx);
   }, [toc, currentCfi]);
 
   // ── 6. Annotation CRUD ─────────────────────────────────────────────────────

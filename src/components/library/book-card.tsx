@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { ProgressArc } from "@/components/dashboard/progress-arc";
 import { cn } from "@/lib/utils";
 import type { Book } from "@/lib/library/types";
 import { READING_STATE_LABELS, type ReadingState } from "@/lib/library/types";
@@ -62,11 +63,28 @@ export function BookCard({ book, onEdit, onDelete }: BookCardProps) {
             </span>
           </div>
 
-          {/* Placeholder metrics */}
-          <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
-            <span>{book.progressPercent}% read</span>
-            <span>{book.notesCount} notes</span>
-            <span>{book.streakDays}d streak</span>
+          {/* Live progress metrics */}
+          <div className="flex items-center gap-3">
+            {book.state === "reading" && (
+              <ProgressArc
+                percent={book.progressPercent}
+                size={36}
+                strokeWidth={3.5}
+                color="var(--primary)"
+                animate={false}
+              />
+            )}
+            <div className="flex flex-col gap-0.5 text-[10px] text-muted-foreground">
+              {book.totalChapters > 0 && book.state === "reading" && (
+                <span>
+                  Ch {book.currentChapterIndex + 1}/{book.totalChapters}
+                </span>
+              )}
+              <span>{book.notesCount} {book.notesCount === 1 ? "note" : "notes"}</span>
+              {book.streakDays > 0 && (
+                <span>{book.streakDays}d streak 🔥</span>
+              )}
+            </div>
           </div>
 
           {/* Actions */}

@@ -39,6 +39,8 @@ function makeBook(title: string, author: string | null, id = "id-1"): Book {
         notesCount: 0,
         streakDays: 0,
         lastReadAt: null,
+        currentChapterIndex: 0,
+        totalChapters: 0,
         uploadId: null,
         createdAt: "2024-01-01T00:00:00Z",
         updatedAt: "2024-01-01T00:00:00Z",
