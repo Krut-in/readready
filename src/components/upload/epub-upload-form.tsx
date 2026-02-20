@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { UploadCloud } from "lucide-react";
+import Link from "next/link";
+import { UploadCloud, BookOpen } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -14,6 +15,8 @@ type UploadResponse =
       path: string;
       size: number;
       contentType: string;
+      uploadId: string;
+      bookId: string | null;
     }
   | {
       ok: false;
@@ -23,16 +26,25 @@ type UploadResponse =
 
 export function EpubUploadForm() {
   const [file, setFile] = useState<File | null>(null);
-  const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [status, setStatus] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [linkedBookId, setLinkedBookId] = useState<string | null>(null);
 
   const maxMb = useMemo(() => getMaxEpubMb(), []);
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
+  async function handleSubmit(
+    event: React.FormEvent<HTMLFormElement>,
+  ): Promise<void> {
     event.preventDefault();
 
     if (!file) {
-      setStatus({ type: "error", message: "Choose an EPUB file before uploading." });
+      setStatus({
+        type: "error",
+        message: "Choose an EPUB file before uploading.",
+      });
       return;
     }
 
@@ -44,6 +56,7 @@ export function EpubUploadForm() {
 
     setIsUploading(true);
     setStatus(null);
+    setLinkedBookId(null);
 
     try {
       const body = new FormData();
@@ -62,15 +75,17 @@ export function EpubUploadForm() {
       }
 
       const sizeMb = (payload.size / (1024 * 1024)).toFixed(2);
+      setLinkedBookId(payload.bookId);
       setStatus({
         type: "success",
-        message: `Uploaded successfully to ${payload.path} (${sizeMb} MB).`,
+        message: `Uploaded successfully (${sizeMb} MB). A library entry has been created.`,
       });
       setFile(null);
     } catch {
       setStatus({
         type: "error",
-        message: "Upload failed due to a network or server issue. Please retry.",
+        message:
+          "Upload failed due to a network or server issue. Please retry.",
       });
     } finally {
       setIsUploading(false);
@@ -82,13 +97,16 @@ export function EpubUploadForm() {
       <div className="space-y-1">
         <h2 className="text-xl font-semibold">Upload EPUB</h2>
         <p className="text-sm text-muted-foreground">
-          EPUB only, up to {maxMb} MB. DRM-protected books are not supported in ReadReady.
+          EPUB only, up to {maxMb} MB. DRM-protected books are not supported in
+          ReadReady.
         </p>
       </div>
 
       <form className="space-y-4" onSubmit={handleSubmit}>
         <label className="block">
-          <span className="mb-2 block text-sm font-medium">Select EPUB file</span>
+          <span className="mb-2 block text-sm font-medium">
+            Select EPUB file
+          </span>
           <input
             className="block w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
             type="file"
@@ -105,9 +123,26 @@ export function EpubUploadForm() {
       </form>
 
       {status ? (
-        <p className={status.type === "success" ? "text-sm text-emerald-600" : "text-sm text-destructive"}>
-          {status.message}
-        </p>
+        <div className="space-y-2">
+          <p
+            className={
+              status.type === "success"
+                ? "text-sm text-emerald-600"
+                : "text-sm text-destructive"
+            }
+          >
+            {status.message}
+          </p>
+          {status.type === "success" && linkedBookId && (
+            <Link
+              href={`/read/${linkedBookId}`}
+              className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+            >
+              <BookOpen className="size-4" />
+              Start reading
+            </Link>
+          )}
+        </div>
       ) : null}
     </Card>
   );

@@ -15,10 +15,10 @@ interface ProgressTrendsWidgetProps {
 
 // Distinct arc colours for up to 4 active books
 const ARC_COLOURS: string[] = [
-  "var(--primary)",   // brand blue / accent
-  "#f97316",          // orange
-  "#8b5cf6",          // violet
-  "#10b981",          // emerald
+  "var(--primary)", // brand blue / accent
+  "#f97316", // orange
+  "#8b5cf6", // violet
+  "#10b981", // emerald
 ];
 
 /**
@@ -49,9 +49,7 @@ export function ProgressTrendsWidget({
           <p className="text-2xl font-bold tabular-nums">
             {totalPagesAllTime.toLocaleString()}
           </p>
-          <p className="mt-0.5 text-[10px] text-muted-foreground">
-            pages read
-          </p>
+          <p className="mt-0.5 text-[10px] text-muted-foreground">pages read</p>
         </motion.div>
 
         <motion.div
@@ -60,7 +58,9 @@ export function ProgressTrendsWidget({
           transition={{ duration: 0.3, delay: 0.05 }}
           className="rounded-lg bg-secondary/50 px-3 py-3 text-center"
         >
-          <p className="text-2xl font-bold tabular-nums">{totalBooksCompleted}</p>
+          <p className="text-2xl font-bold tabular-nums">
+            {totalBooksCompleted}
+          </p>
           <p className="mt-0.5 text-[10px] text-muted-foreground">
             {totalBooksCompleted === 1 ? "book" : "books"} finished
           </p>
@@ -76,10 +76,12 @@ export function ProgressTrendsWidget({
           <div className="flex flex-wrap gap-5">
             {books.slice(0, 4).map((book, i) => {
               // Prefer chapter-based progress; fall back to location %
+              // Use 1-indexed chapter (matching BookCard display)
               const chapterPercent =
                 book.totalChapters > 0
                   ? Math.round(
-                      (book.currentChapterIndex / book.totalChapters) * 100,
+                      ((book.currentChapterIndex + 1) / book.totalChapters) *
+                        100,
                     )
                   : book.progressPercent;
 
@@ -95,12 +97,14 @@ export function ProgressTrendsWidget({
                     percent={chapterPercent}
                     size={72}
                     strokeWidth={6}
-                    color={ARC_COLOURS[i % ARC_COLOURS.length] ?? "var(--primary)"}
+                    color={
+                      ARC_COLOURS[i % ARC_COLOURS.length] ?? "var(--primary)"
+                    }
                     label={book.title}
                   />
                   {book.totalChapters > 0 && (
                     <p className="text-[9px] text-muted-foreground">
-                      {book.currentChapterIndex}/{book.totalChapters} ch
+                      Ch {book.currentChapterIndex + 1}/{book.totalChapters}
                     </p>
                   )}
                 </motion.div>

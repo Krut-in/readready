@@ -8,6 +8,7 @@ import {
   buildStoredPath,
   validateUploadFormData,
 } from "@/lib/uploads/epub-upload";
+import { buildGoodreadsSearchUrl } from "@/lib/library/goodreads-link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request): Promise<NextResponse> {
@@ -49,30 +50,68 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     const storedPath = buildStoredPath(objectPath);
 
-    const { error: insertError } = await supabase.from("book_uploads").insert({
-      user_id: user.id,
-      storage_path: storedPath,
-      original_name: file.name,
-      size_bytes: file.size,
-      mime_type: EPUB_MIME,
-    });
+    // Insert book_uploads metadata row and retrieve the generated ID
+    const { data: uploadRow, error: insertError } = await supabase
+      .from("book_uploads")
+      .insert({
+        user_id: user.id,
+        storage_path: storedPath,
+        original_name: file.name,
+        size_bytes: file.size,
+        mime_type: EPUB_MIME,
+      })
+      .select("id")
+      .single();
 
-    if (insertError) {
+    if (insertError || !uploadRow) {
       logger.error("epub_upload_metadata_failed", {
         userId: user.id,
-        code: insertError.message,
+        code: insertError?.message,
       });
       await supabase.storage.from(EPUB_BUCKET).remove([objectPath]);
       throw new AppError("metadata_save_failed", "File uploaded, but metadata save failed. Please retry.", 500);
     }
 
-    logger.info("epub_uploaded", { userId: user.id, sizeBytes: file.size });
+    // Auto-create a books entry linked to this upload so the reader can find it.
+    // Derive a title from the original filename (strip .epub extension).
+    const derivedTitle = file.name.replace(/\.epub$/i, "").replace(/[_-]/g, " ").trim() || "Untitled";
+    const goodreadsUrl = buildGoodreadsSearchUrl(derivedTitle);
+
+    const { data: newBook, error: bookError } = await supabase
+      .from("books")
+      .insert({
+        user_id: user.id,
+        title: derivedTitle,
+        state: "reading",
+        upload_id: uploadRow.id,
+        goodreads_search_url: goodreadsUrl,
+      })
+      .select("id")
+      .single();
+
+    if (bookError) {
+      // Non-fatal: the upload succeeded; user can manually link via library.
+      logger.warn("epub_upload_book_link_failed", {
+        userId: user.id,
+        uploadId: uploadRow.id,
+        code: bookError.message,
+      });
+    }
+
+    logger.info("epub_uploaded", {
+      userId: user.id,
+      sizeBytes: file.size,
+      uploadId: uploadRow.id,
+      bookId: newBook?.id ?? null,
+    });
 
     return NextResponse.json({
       ok: true,
       path: storedPath,
       size: file.size,
       contentType: EPUB_MIME,
+      uploadId: uploadRow.id,
+      bookId: newBook?.id ?? null,
     });
   } catch (error) {
     if (!(error instanceof AppError)) {

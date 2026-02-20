@@ -58,9 +58,13 @@ export function BookCard({ book, onEdit, onDelete }: BookCardProps) {
         {/* Info */}
         <div className="flex min-w-0 flex-1 flex-col justify-between gap-2">
           <div className="space-y-1">
-            <h3 className="truncate text-sm font-semibold leading-tight">{book.title}</h3>
+            <h3 className="truncate text-sm font-semibold leading-tight">
+              {book.title}
+            </h3>
             {book.author && (
-              <p className="truncate text-xs text-muted-foreground">{book.author}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                {book.author}
+              </p>
             )}
             <span
               className={cn(
@@ -89,21 +93,41 @@ export function BookCard({ book, onEdit, onDelete }: BookCardProps) {
                   Ch {book.currentChapterIndex + 1}/{book.totalChapters}
                 </span>
               )}
-              <span>{book.notesCount} {book.notesCount === 1 ? "note" : "notes"}</span>
-              {book.streakDays > 0 && (
-                <span>{book.streakDays}-day streak</span>
-              )}
+              <span>
+                {book.notesCount} {book.notesCount === 1 ? "note" : "notes"}
+              </span>
+              {book.streakDays > 0 && <span>{book.streakDays}-day streak</span>}
             </div>
           </div>
 
           {/* Actions */}
           <div className="flex items-center gap-1">
-            <Link href={`/read/${book.id}`}>
-              <Button size="sm" variant="default" className="h-7 px-3 text-xs">
+            {book.uploadId ? (
+              <Link href={`/read/${book.id}`}>
+                <Button
+                  size="sm"
+                  variant="default"
+                  className="h-7 px-3 text-xs"
+                >
+                  Read
+                </Button>
+              </Link>
+            ) : (
+              <Button
+                size="sm"
+                variant="default"
+                className="h-7 px-3 text-xs"
+                disabled
+              >
                 Read
               </Button>
-            </Link>
-            <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => onEdit(book)}>
+            )}
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2 text-xs"
+              onClick={() => onEdit(book)}
+            >
               Edit
             </Button>
             <Button
