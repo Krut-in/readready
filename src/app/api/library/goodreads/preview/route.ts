@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { AppError, toApiError } from "@/lib/errors";
+import { logger } from "@/lib/logger";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { parseGoodreadsCsv } from "@/lib/library/goodreads-csv";
 import { detectConflicts } from "@/lib/library/import-merge";
@@ -43,6 +44,10 @@ export async function POST(request: Request): Promise<NextResponse> {
         const parseResult = parseGoodreadsCsv(csvText);
 
         if (!parseResult.ok) {
+            logger.warn("goodreads_preview_parse_error", {
+                userId: user.id,
+                message: parseResult.message,
+            });
             throw new AppError("parse_error", parseResult.message, 400);
         }
 
@@ -53,11 +58,21 @@ export async function POST(request: Request): Promise<NextResponse> {
             .eq("user_id", user.id);
 
         if (fetchError) {
+            logger.error("goodreads_preview_db_failed", {
+                userId: user.id,
+                code: fetchError.message,
+            });
             throw new AppError("query_failed", "Failed to load existing library.", 500);
         }
 
         const existingBooks = (existingData ?? []).map(dbRowToBook);
         const previews = detectConflicts(parseResult.rows, existingBooks);
+
+        logger.info("goodreads_preview_ok", {
+            userId: user.id,
+            rowCount: parseResult.rows.length,
+            warningCount: parseResult.warnings.length,
+        });
 
         return NextResponse.json({
             ok: true,
@@ -66,6 +81,9 @@ export async function POST(request: Request): Promise<NextResponse> {
             csvText,
         });
     } catch (error) {
+        if (!(error instanceof AppError)) {
+            logger.error("goodreads_preview_unexpected", { message: String(error) });
+        }
         const handled = toApiError(error);
         return NextResponse.json(handled.payload, { status: handled.status });
     }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { AppError, toApiError } from "@/lib/errors";
+import { logger } from "@/lib/logger";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { parseGoodreadsCsv } from "@/lib/library/goodreads-csv";
 import { detectConflicts, applyDecisions } from "@/lib/library/import-merge";
@@ -119,6 +120,13 @@ export async function POST(request: Request): Promise<NextResponse> {
             }
         }
 
+        logger.info("goodreads_import_complete", {
+            userId: user.id,
+            created: createdCount,
+            replaced: replacedCount,
+            skipped,
+        });
+
         return NextResponse.json({
             ok: true,
             created: createdCount,
@@ -126,6 +134,9 @@ export async function POST(request: Request): Promise<NextResponse> {
             skipped,
         });
     } catch (error) {
+        if (!(error instanceof AppError)) {
+            logger.error("goodreads_import_unexpected", { message: String(error) });
+        }
         const handled = toApiError(error);
         return NextResponse.json(handled.payload, { status: handled.status });
     }

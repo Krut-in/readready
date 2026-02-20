@@ -122,7 +122,9 @@ export function calculateStreak(dailyStats: DailyReadingStats[]): StreakResult {
     if (prevMs === null || dayMs === prevMs + DAY_MS) {
       tempStreak++;
     } else {
-      tempStreak = 1; // restart after gap
+      // Gap between qualifying days: save current run before restarting.
+      longestStreak = Math.max(longestStreak, tempStreak);
+      tempStreak = 1;
     }
     prevMs = dayMs;
   }

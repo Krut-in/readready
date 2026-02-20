@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { AppError, toApiError } from "@/lib/errors";
+import { logger } from "@/lib/logger";
 import {
   EPUB_BUCKET,
   buildStorageObjectPath,
@@ -38,6 +39,10 @@ export async function POST(request: Request): Promise<NextResponse> {
     });
 
     if (storageError) {
+      logger.error("epub_upload_storage_failed", {
+        userId: user.id,
+        code: storageError.message,
+      });
       throw new AppError("upload_failed", "Upload failed. Please retry.", 500);
     }
 
@@ -52,9 +57,15 @@ export async function POST(request: Request): Promise<NextResponse> {
     });
 
     if (insertError) {
+      logger.error("epub_upload_metadata_failed", {
+        userId: user.id,
+        code: insertError.message,
+      });
       await supabase.storage.from(EPUB_BUCKET).remove([objectPath]);
       throw new AppError("metadata_save_failed", "File uploaded, but metadata save failed. Please retry.", 500);
     }
+
+    logger.info("epub_uploaded", { userId: user.id, sizeBytes: file.size });
 
     return NextResponse.json({
       ok: true,
@@ -63,6 +74,9 @@ export async function POST(request: Request): Promise<NextResponse> {
       contentType: file.type || "application/epub+zip",
     });
   } catch (error) {
+    if (!(error instanceof AppError)) {
+      logger.error("epub_upload_unexpected", { message: String(error) });
+    }
     const handled = toApiError(error);
     return NextResponse.json(handled.payload, { status: handled.status });
   }

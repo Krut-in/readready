@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { z } from "zod";
 
 import { AppError, toApiError } from "@/lib/errors";
+import { logger } from "@/lib/logger";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   estimateWordsFromProgress,
@@ -94,6 +95,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       });
 
     if (sessionError) {
+      logger.error("session_insert_failed", {
+        userId: user.id,
+        bookId,
+        code: sessionError.message,
+      });
       throw new AppError(
         "session_insert_failed",
         "Failed to record reading session.",
@@ -134,8 +140,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       .eq("id", bookId)
       .eq("user_id", user.id);
 
+    logger.info("session_recorded", { userId: user.id, bookId, pages, words, bookStreak });
+
     return NextResponse.json({ ok: true, pages, words, bookStreak });
   } catch (err) {
+    if (!(err instanceof AppError)) {
+      logger.error("session_unexpected", { message: String(err) });
+    }
     const handled = toApiError(err);
     return NextResponse.json(handled.payload, { status: handled.status });
   }

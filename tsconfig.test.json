@@ -16,7 +16,9 @@
     "src/lib/uploads/epub-upload.ts",
     "src/lib/supabase/auth-routing.ts",
     "src/lib/errors.ts",
-    "src/lib/library/**/*.ts"
+    "src/lib/library/**/*.ts",
+    "src/lib/progress/**/*.ts",
+    "src/lib/annotations/**/*.ts"
   ],
   "exclude": [
     "node_modules"
