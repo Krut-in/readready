@@ -25,6 +25,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     const formData = await request.formData();
+    const bookIdToLink = formData.get("bookId") as string | null;
     const validated = validateUploadFormData(formData);
 
     if (!validated.ok) {
@@ -70,6 +71,49 @@ export async function POST(request: Request): Promise<NextResponse> {
       });
       await supabase.storage.from(EPUB_BUCKET).remove([objectPath]);
       throw new AppError("metadata_save_failed", "File uploaded, but metadata save failed. Please retry.", 500);
+    }
+
+    // If a bookId was provided, link the upload to it instead of creating a new book
+    if (bookIdToLink) {
+      const { data: existingBook, error: checkError } = await supabase
+        .from("books")
+        .select("id")
+        .eq("id", bookIdToLink)
+        .eq("user_id", user.id)
+        .single();
+
+      if (!checkError && existingBook) {
+        const { error: linkError } = await supabase
+          .from("books")
+          .update({ upload_id: uploadRow.id })
+          .eq("id", bookIdToLink)
+          .eq("user_id", user.id);
+
+        if (linkError) {
+          logger.warn("epub_upload_existing_book_link_failed", {
+            userId: user.id,
+            uploadId: uploadRow.id,
+            bookId: bookIdToLink,
+            code: linkError.message,
+          });
+        }
+
+        logger.info("epub_uploaded_and_linked", {
+          userId: user.id,
+          sizeBytes: file.size,
+          uploadId: uploadRow.id,
+          bookId: bookIdToLink,
+        });
+
+        return NextResponse.json({
+          ok: true,
+          path: storedPath,
+          size: file.size,
+          contentType: EPUB_MIME,
+          uploadId: uploadRow.id,
+          bookId: bookIdToLink,
+        });
+      }
     }
 
     // Auto-create a books entry linked to this upload so the reader can find it.

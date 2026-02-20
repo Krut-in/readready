@@ -48,12 +48,11 @@ export async function PATCH(request: NextRequest, context: RouteContext): Promis
         if (input.googleBooksId !== undefined) updatePayload.google_books_id = input.googleBooksId;
         if (input.openLibraryKey !== undefined) updatePayload.open_library_key = input.openLibraryKey;
 
-        // Recompute Goodreads URL if title or author changed
-        if (input.title !== undefined || input.author !== undefined) {
-            // Fetch current values if needed for URL computation
+        // Validation and derived updates that require current state
+        if (input.title !== undefined || input.author !== undefined || input.state !== undefined) {
             const { data: current, error: fetchError } = await supabase
                 .from("books")
-                .select("title, author")
+                .select("title, author, state")
                 .eq("id", bookId)
                 .eq("user_id", user.id)
                 .single();
@@ -62,9 +61,15 @@ export async function PATCH(request: NextRequest, context: RouteContext): Promis
                 throw new AppError("not_found", "Book not found.", 404);
             }
 
-            const finalTitle = input.title ?? (current.title as string);
-            const finalAuthor = input.author !== undefined ? input.author : (current.author as string | null);
-            updatePayload.goodreads_search_url = buildGoodreadsSearchUrl(finalTitle, finalAuthor);
+            if (input.state !== undefined && current.state === "completed" && input.state === "to_read") {
+                throw new AppError("invalid_transition", "Cannot move a completed book back to purely 'to read'. Use 'reading' if you are re-reading.", 400);
+            }
+
+            if (input.title !== undefined || input.author !== undefined) {
+                const finalTitle = input.title ?? (current.title as string);
+                const finalAuthor = input.author !== undefined ? input.author : (current.author as string | null);
+                updatePayload.goodreads_search_url = buildGoodreadsSearchUrl(finalTitle, finalAuthor);
+            }
         }
 
         if (Object.keys(updatePayload).length === 0) {

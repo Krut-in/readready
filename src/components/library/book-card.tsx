@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, UploadCloud, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 
 import { Card } from "@/components/ui/card";
@@ -27,6 +28,37 @@ type BookCardProps = {
 
 export function BookCard({ book, onEdit, onDelete }: BookCardProps) {
   const [imgError, setImgError] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
+
+  const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const body = new FormData();
+      body.set("file", file);
+      body.set("bookId", book.id);
+
+      const response = await fetch("/api/uploads/epub", {
+        method: "POST",
+        body,
+      });
+
+      if (response.ok) {
+        router.refresh();
+      } else {
+        console.error("Upload failed");
+      }
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
 
   return (
     <motion.div
@@ -102,6 +134,13 @@ export function BookCard({ book, onEdit, onDelete }: BookCardProps) {
 
           {/* Actions */}
           <div className="flex items-center gap-1">
+            <input
+              type="file"
+              accept=".epub,application/epub+zip"
+              className="hidden"
+              ref={fileInputRef}
+              onChange={handleUpload}
+            />
             {book.uploadId ? (
               <Link href={`/read/${book.id}`}>
                 <Button
@@ -115,11 +154,17 @@ export function BookCard({ book, onEdit, onDelete }: BookCardProps) {
             ) : (
               <Button
                 size="sm"
-                variant="default"
-                className="h-7 px-3 text-xs"
-                disabled
+                variant="outline"
+                className="h-7 px-3 text-xs gap-1.5"
+                disabled={isUploading}
+                onClick={() => fileInputRef.current?.click()}
               >
-                Read
+                {isUploading ? (
+                  <Loader2 className="size-3 animate-spin" />
+                ) : (
+                  <UploadCloud className="size-3" />
+                )}
+                Upload
               </Button>
             )}
             <Button
