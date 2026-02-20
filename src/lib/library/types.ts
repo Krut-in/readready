@@ -27,6 +27,8 @@ export type Book = {
     notesCount: number;
     streakDays: number;
     lastReadAt: string | null;
+    /** EPUB CFI string for reading position */
+    lastReadLocation: string | null;
     /** 0-indexed chapter the user is currently on (from TOC) */
     currentChapterIndex: number;
     /** Total TOC items — 0 if not yet loaded */
@@ -128,6 +130,7 @@ export function dbRowToBook(row: Record<string, unknown>): Book {
         notesCount: (row.notes_count as number) ?? 0,
         streakDays: (row.streak_days as number) ?? 0,
         lastReadAt: (row.last_read_at as string) ?? null,
+        lastReadLocation: (row.last_read_location as string) ?? null,
         currentChapterIndex: (row.current_chapter_index as number) ?? 0,
         totalChapters: (row.total_chapters as number) ?? 0,
         uploadId: (row.upload_id as string) ?? null,

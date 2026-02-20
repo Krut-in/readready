@@ -275,7 +275,7 @@ function AnnotationCard({
             value={editValue}
             onChange={(e) => onEditValueChange(e.target.value)}
             placeholder="Add a note… (Markdown supported)"
-            className="text-sm min-h-[90px] resize-none font-mono text-xs leading-relaxed"
+            className="min-h-[90px] resize-none font-mono text-xs leading-relaxed"
           />
           <div className="flex justify-end gap-2">
             <Button

@@ -102,11 +102,44 @@ export function EpubReader({
   /** TOC item count, updated once navigation loads */
   const totalChaptersRef = useRef(0);
 
-  // ── Typography settings ────────────────────────────────────────────────────
-  const [theme, setTheme] = useState<ThemeName>("light");
-  const [fontSize, setFontSize] = useState(18); // px
-  const [fontFamily, setFontFamily] = useState("Literata");
-  const [lineHeight, setLineHeight] = useState(1.5);
+  // ── Typography settings (persisted in localStorage) ─────────────────────────
+  const STORAGE_KEY = "readready-reader-settings";
+
+  const getStoredSettings = () => {
+    if (typeof window === "undefined") return null;
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored)
+        return JSON.parse(stored) as {
+          theme?: ThemeName;
+          fontSize?: number;
+          fontFamily?: string;
+          lineHeight?: number;
+        };
+    } catch {
+      /* ignore invalid JSON */
+    }
+    return null;
+  };
+
+  const storedSettings = getStoredSettings();
+  const [theme, setTheme] = useState<ThemeName>(
+    storedSettings?.theme ?? "light",
+  );
+  const [fontSize, setFontSize] = useState(storedSettings?.fontSize ?? 18); // px
+  const [fontFamily, setFontFamily] = useState(
+    storedSettings?.fontFamily ?? "Literata",
+  );
+  const [lineHeight, setLineHeight] = useState(
+    storedSettings?.lineHeight ?? 1.5,
+  );
+
+  // Persist settings to localStorage when they change
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const settings = { theme, fontSize, fontFamily, lineHeight };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+  }, [theme, fontSize, fontFamily, lineHeight]);
 
   // ── Annotations ───────────────────────────────────────────────────────────
   const [annotations, setAnnotations] = useState<Annotation[]>([]);

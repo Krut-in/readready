@@ -1,7 +1,9 @@
 export const MAX_EPUB_BYTES = 100 * 1024 * 1024;
 
+// EPUB files should have this MIME type, but browsers may send different values
 const ALLOWED_EPUB_MIME_TYPES = new Set([
   "application/epub+zip",
+  "application/octet-stream", // Some browsers send this for .epub files
 ]);
 
 export type EpubValidationCode = "invalid_type" | "file_too_large";
@@ -21,6 +23,7 @@ function hasEpubExtension(fileName: string): boolean {
 }
 
 function hasAllowedMime(fileType: string): boolean {
+  // If browser doesn't provide a MIME type, we rely on extension check
   if (!fileType) {
     return true;
   }
